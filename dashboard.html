@@ -1,0 +1,148 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ESP32 MQTT Dashboard</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 { color: #0a7e8c; }
+
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 16px;
+            margin: 12px auto;
+            max-width: 360px;
+            box-shadow: 0 2px 6px rgba(0,0,0,.15);
+        }
+
+        button {
+            font-size: 1.1rem;
+            padding: 12px 28px;
+            margin: 6px;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        #btnOn { background: #2e9e4f; }
+        #btnOff { background: #c0392b; }
+
+        .value {
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>ESP32 Remote Control</h1>
+
+    <div class="card">
+        <p>Broker: <b id="conn">Connecting...</b></p>
+        <p>ESP32: <b id="dev">Unknown</b></p>
+    </div>
+
+    <div class="card">
+        <h3>LED (GPIO 26)</h3>
+
+        <button id="btnOn">ON</button>
+        <button id="btnOff">OFF</button>
+
+        <p>State: <span id="led" class="value">--</span></p>
+    </div>
+
+    <div class="card">
+        <h3>Telemetry</h3>
+
+        <p>Voltage: <span id="volts" class="value">--</span> V</p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
+
+    <script>
+
+        // EMQX credentials
+        const HOST = "k4ff02f7.ala.us-east-1.emqxsl.com";
+        const USERNAME = "esp32";
+        const PASSWORD = "esp32";
+
+        const $ = id => document.getElementById(id);
+
+        // Connect to EMQX using secure WebSockets
+        const client = mqtt.connect("wss://" + HOST + ":8084/mqtt", {
+            username: USERNAME,
+            password: PASSWORD,
+            reconnectPeriod: 3000
+        });
+
+        // Connected
+        client.on("connect", () => {
+
+            $("conn").textContent = "Connected";
+
+            client.subscribe([
+                "esp32/led/state",
+                "esp32/voltage",
+                "esp32/status"
+            ]);
+        });
+
+        // Disconnected
+        client.on("close", () => {
+            $("conn").textContent = "Disconnected";
+        });
+
+        // Error
+        client.on("error", err => {
+            console.log("MQTT error:", err.message);
+        });
+
+        // Receive ESP32 messages
+        client.on("message", (topic, payload) => {
+
+            const value = payload.toString();
+
+            if (topic === "esp32/led/state") {
+                $("led").textContent = value;
+            }
+
+            if (topic === "esp32/voltage") {
+                $("volts").textContent = value;
+            }
+
+            if (topic === "esp32/status") {
+                $("dev").textContent = value;
+            }
+        });
+
+        // LED ON
+        $("btnOn").onclick = () => {
+            if (client.connected) {
+                client.publish("esp32/led", "ON");
+            }
+        };
+
+        // LED OFF
+        $("btnOff").onclick = () => {
+            if (client.connected) {
+                client.publish("esp32/led", "OFF");
+            }
+        };
+
+    </script>
+
+</body>
+</html>
