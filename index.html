@@ -141,7 +141,9 @@
                 client.publish("esp32/led", "OFF");
             }
         };
-
+ if ( "esp32/voltage" !== null) {
+                document.getElementById("dev").textContent = "Online";
+            }
     </script>
 
 </body>
